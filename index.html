@@ -1,7 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ACID FX PRO | Trading Terminal</title>
 <style>
 :root{--bg:#080d18;--panel:#101a2b;--panel2:#0c1423;--line:#20304a;--text:#e8f0ff;--muted:#8494ad;--lime:#b7ff42;--cyan:#40d9ff;--red:#ff5e73;--green:#40e0a0}
@@ -10,88 +12,125 @@ header{height:70px;border-bottom:1px solid var(--line);display:flex;align-items:
 .brand{font-size:19px;font-weight:900;letter-spacing:1.5px}.brand span{color:var(--lime)}.sub{color:var(--muted);font-size:11px;letter-spacing:2px}
 .pill{border:1px solid var(--line);border-radius:30px;padding:7px 12px;color:var(--muted);font-size:11px}.pill.good{color:var(--green);border-color:#23634f}.pill.bad{color:var(--red);border-color:#713345}
 main{max-width:1500px;margin:auto;padding:22px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}.panel,.stat{background:linear-gradient(145deg,#111d30,#0c1422);border:1px solid var(--line);border-radius:13px;padding:17px;min-width:0}.stat small,.muted{color:var(--muted)}.stat strong{display:block;font-size:23px;margin-top:5px;font-weight:800}.layout{display:grid;grid-template-columns:1.25fr .75fr;gap:14px;margin-top:14px}.section-title{font-size:12px;letter-spacing:1.6px;color:#a9bad2;font-weight:800;margin:0 0 14px}.bots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.bot{background:#0a1423;border:1px solid var(--line);border-radius:10px;padding:13px;cursor:pointer;text-align:left;color:var(--text)}.bot.active{border-color:var(--lime);box-shadow:0 0 0 1px #b7ff4230 inset}.bot b{display:block;font-size:13px}.bot small{color:var(--muted);font-size:11px}.controls{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.btn{border:0;border-radius:8px;padding:11px 15px;font-weight:800;cursor:pointer;background:var(--lime);color:#10170a}.btn.secondary{background:#1a2b42;color:var(--text);border:1px solid var(--line)}.btn.danger{background:#6d2636;color:#fff}.btn:disabled{opacity:.4;cursor:not-allowed}.notice{margin-top:13px;padding:12px;border:1px solid #725a27;background:#302813;color:#f5d98b;border-radius:9px;font-size:12px}.table{width:100%;border-collapse:collapse;font-size:12px}.table th,.table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}.table th{color:var(--muted);font-weight:600}.buy{color:var(--green)}.sell{color:var(--red)}.wait{color:var(--muted)}.log{padding:8px 0;border-bottom:1px solid #1a2940;font-size:12px}.log time{color:var(--muted);margin-right:8px}.log.TRADE{color:var(--green)}.log.ERROR,.log.BLOCK{color:#ff8795}.log.WARN{color:#f4d27c}.foot{color:var(--muted);font-size:11px;margin:18px 2px}.statusline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:var(--red)}.dot.on{background:var(--green);box-shadow:0 0 9px var(--green)}
+.tokenbar{display:flex;gap:9px;flex-wrap:wrap;margin:0 0 14px;padding:13px;background:#101a2b;border:1px solid var(--line);border-radius:10px}.tokenbar input{flex:1;min-width:190px;background:#080d18;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:10px}
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.layout{grid-template-columns:1fr}}@media(max-width:560px){header{padding:0 14px}.sub{display:none}main{padding:13px}.bots{grid-template-columns:1fr}.grid{gap:8px}.stat{padding:12px}.stat strong{font-size:19px}}
-</style></head>
+</style>
+</head>
 <body>
-<header><div><div class="brand">ACID <span>FX PRO</span></div><div class="sub">MULTI-STRATEGY MT5 TERMINAL</div></div><div class="statusline"><span id="mt5pill" class="pill bad">MT5 DISCONNECTED</span><span id="modepill" class="pill">ACCOUNT UNKNOWN</span></div></header>
+<header>
+<div><div class="brand">ACID <span>FX PRO</span></div><div class="sub">MULTI-STRATEGY MT5 TERMINAL</div></div>
+<div class="statusline"><span id="mt5pill" class="pill bad">ENGINE DISCONNECTED</span><span id="modepill" class="pill">ACCOUNT UNKNOWN</span></div>
+</header>
 <main>
+<div class="tokenbar">
+<input id="apiToken" type="password" placeholder="Enter your private engine API token" autocomplete="off">
+<button class="btn secondary" id="saveToken">CONNECT TOKEN</button>
+<span id="connectionText" class="muted">Token required · Private engine connection</span>
+</div>
 <div class="grid">
- <div class="stat"><small>ACCOUNT BALANCE</small><strong id="balance">—</strong><small id="currency">MT5 account</small></div>
- <div class="stat"><small>EQUITY</small><strong id="equity">—</strong><small>Live account equity</small></div>
- <div class="stat"><small>OPEN ACID POSITIONS</small><strong id="positionsCount">0</strong><small>Magic number tracked</small></div>
- <div class="stat"><small>DAILY TRADE LIMIT</small><strong id="daily">0 / 3</strong><small>Maximum entries per day</small></div>
+<div class="stat"><small>ACCOUNT BALANCE</small><strong id="balance">—</strong><small id="currency">MT5 account</small></div>
+<div class="stat"><small>EQUITY</small><strong id="equity">—</strong><small>Live account equity</small></div>
+<div class="stat"><small>OPEN ACID POSITIONS</small><strong id="positionsCount">0</strong><small>Magic number tracked</small></div>
+<div class="stat"><small>DAILY TRADE LIMIT</small><strong id="daily">0 / 3</strong><small>Maximum entries per day</small></div>
 </div>
 <div class="layout">
- <section class="panel">
-  <h3 class="section-title">01 / SELECT STRATEGY</h3>
-  <div class="bots">
-   <button class="bot active" data-bot="SCALPER"><b>ACID SCALPER</b><small>M1 entry · M5 trend · breakout</small></button>
-   <button class="bot" data-bot="NORMAL"><b>ACID NORMAL</b><small>M5 entry · M15 trend · pullback</small></button>
-   <button class="bot" data-bot="FAST"><b>ACID FAST EXECUTION</b><small>M1 momentum · rapid scanning</small></button>
-  </div>
-  <div class="controls">
-   <button class="btn" id="arm">ARM DEMO EXECUTION</button>
-   <button class="btn" id="start">START BOT</button>
-   <button class="btn danger" id="stop">EMERGENCY STOP</button>
-   <button class="btn secondary" id="disarm">DISARM</button>
-  </div>
-  <div class="notice"><b>DEMO-ONLY SAFETY:</b> The server refuses to send orders unless MT5 reports account mode DEMO. Execution starts disarmed after every restart. Emergency Stop prevents new entries; it does not close positions already open in MT5.</div>
-  <div style="margin-top:16px" class="statusline"><span class="dot" id="runDot"></span><b id="runState">SCANNER STOPPED</b><span class="muted" id="lastScan"></span></div>
-  <h3 class="section-title" style="margin-top:22px">02 / MARKET INTELLIGENCE</h3>
-  <div style="overflow:auto"><table class="table"><thead><tr><th>SYMBOL</th><th>SIGNAL</th><th>BID</th><th>ASK</th><th>REASON</th></tr></thead><tbody id="signals"><tr><td colspan="5" class="muted">Waiting for MT5 connection…</td></tr></tbody></table></div>
- </section>
- <section class="panel">
-  <h3 class="section-title">03 / MT5 ACCOUNT GATE</h3>
-  <div class="muted">Account server</div><b id="server">—</b>
-  <div class="muted" style="margin-top:12px">Account mode</div><b id="accountMode">—</b>
-  <div class="muted" style="margin-top:12px">Trading permissions</div><b id="permissions">—</b>
-  <div class="muted" style="margin-top:12px">Execution state</div><b id="armedState">DISARMED</b>
-  <div class="muted" style="margin-top:18px">Risk model</div><b>0.5% calculated risk per trade</b>
-  <div class="muted" style="margin-top:7px">Max 2 open positions · max 3 entries/day · 10-minute symbol cooldown · ATR stop/target</div>
-  <h3 class="section-title" style="margin-top:25px">04 / ENGINE LOG</h3><div id="logs"><div class="muted">No events yet.</div></div>
- </section>
+<section class="panel">
+<h3 class="section-title">01 / SELECT STRATEGY</h3>
+<div class="bots">
+<button class="bot active" data-bot="SCALPER"><b>ACID SCALPER</b><small>M1 entry · M5 trend · breakout</small></button>
+<button class="bot" data-bot="NORMAL"><b>ACID NORMAL</b><small>M5 entry · M15 trend · pullback</small></button>
+<button class="bot" data-bot="FAST"><b>ACID FAST EXECUTION</b><small>M1 momentum · rapid scanning</small></button>
+</div>
+<div class="controls">
+<button class="btn" id="arm">ARM DEMO EXECUTION</button>
+<button class="btn" id="start">START BOT</button>
+<button class="btn danger" id="stop">EMERGENCY STOP</button>
+<button class="btn secondary" id="disarm">DISARM</button>
+</div>
+<div class="notice"><b>DEMO-ONLY SAFETY:</b> The engine must verify a DEMO account before sending any order. Execution starts disarmed after restart. Emergency Stop prevents new entries; it does not close existing positions.</div>
+<div style="margin-top:16px" class="statusline"><span class="dot" id="runDot"></span><b id="runState">SCANNER STOPPED</b><span class="muted" id="lastScan"></span></div>
+<h3 class="section-title" style="margin-top:22px">02 / MARKET INTELLIGENCE</h3>
+<div style="overflow:auto"><table class="table"><thead><tr><th>SYMBOL</th><th>SIGNAL</th><th>BID</th><th>ASK</th><th>REASON</th></tr></thead><tbody id="signals"><tr><td colspan="5" class="muted">Waiting for engine connection…</td></tr></tbody></table></div>
+</section>
+<section class="panel">
+<h3 class="section-title">03 / MT5 ACCOUNT GATE</h3>
+<div class="muted">Account server</div><b id="server">—</b>
+<div class="muted" style="margin-top:12px">Account mode</div><b id="accountMode">—</b>
+<div class="muted" style="margin-top:12px">Trading permissions</div><b id="permissions">—</b>
+<div class="muted" style="margin-top:12px">Execution state</div><b id="armedState">DISARMED</b>
+<div class="muted" style="margin-top:18px">Risk model</div><b>0.5% calculated risk per trade</b>
+<div class="muted" style="margin-top:7px">Max 2 open positions · max 3 entries/day · 10-minute symbol cooldown · ATR stop/target</div>
+<h3 class="section-title" style="margin-top:25px">04 / ENGINE LOG</h3><div id="logs"><div class="muted">No events yet.</div></div>
+</section>
 </div>
 <div class="layout">
- <section class="panel"><h3 class="section-title">05 / OPEN ACID POSITIONS</h3><div style="overflow:auto"><table class="table"><thead><tr><th>TICKET</th><th>SYMBOL</th><th>SIDE</th><th>VOLUME</th><th>ENTRY</th><th>SL</th><th>TP</th><th>P/L</th></tr></thead><tbody id="positions"><tr><td colspan="8" class="muted">No positions.</td></tr></tbody></table></div></section>
- <section class="panel"><h3 class="section-title">06 / WATCHLIST</h3><div class="statusline"><span class="pill">XAUUSD</span><span class="pill">EURUSD</span><span class="pill">GBPUSD</span><span class="pill">USDJPY</span></div><p class="muted">The engine checks exact symbol names only. If your broker uses a suffix such as EURUSD.a, it will report that the exact symbol is missing rather than silently trading a different instrument.</p></section>
+<section class="panel"><h3 class="section-title">05 / OPEN ACID POSITIONS</h3><div style="overflow:auto"><table class="table"><thead><tr><th>TICKET</th><th>SYMBOL</th><th>SIDE</th><th>VOLUME</th><th>ENTRY</th><th>SL</th><th>TP</th><th>P/L</th></tr></thead><tbody id="positions"><tr><td colspan="8" class="muted">No positions.</td></tr></tbody></table></div></section>
+<section class="panel"><h3 class="section-title">06 / WATCHLIST</h3><div class="statusline"><span class="pill">XAUUSD</span><span class="pill">EURUSD</span><span class="pill">GBPUSD</span><span class="pill">USDJPY</span></div><p class="muted">The engine checks exact symbol names only. Broker suffixes are not automatically substituted.</p></section>
 </div>
-<div class="foot">ACID FX PRO · Local terminal · 127.0.0.1:8765 · Demo account only. This is software testing, not financial advice. Automated trading can lose money; use demo funds only.</div>
+<div class="foot">ACID FX PRO · Private Tailscale engine · Demo account only. Automated trading can lose money; use demo funds only.</div>
 </main>
 <script>
+const API_BASE="https://acidx.tailf72e0e.ts.net";
+let apiToken="";
 let selected="SCALPER";
-async function api(url,body){const r=await fetch(url,{method:body?"POST":"GET",headers:{"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});let j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.message||"Request failed");return j}
+function getToken(){return apiToken}
+async function api(url,body){
+ const token=getToken();
+ if(!token)throw new Error("Enter your private API token first.");
+ const r=await fetch(API_BASE+url,{
+  method:body?"POST":"GET",
+  headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+  body:body?JSON.stringify(body):undefined
+ });
+ let j;
+ try{j=await r.json()}catch{throw new Error("Engine returned an invalid response.")}
+ if(!r.ok||j.ok===false)throw new Error(j.message||"Request failed");
+ return j;
+}
 function fmt(x){return Number(x||0).toFixed(2)}
 function showMessage(m){alert(m)}
-document.querySelectorAll(".bot").forEach(b=>b.addEventListener("click",async()=>{try{await api("/api/select",{bot:b.dataset.bot});selected=b.dataset.bot;document.querySelectorAll(".bot").forEach(x=>x.classList.toggle("active",x===b));refresh()}catch(e){showMessage(e.message)}}));
-document.getElementById("arm").onclick=async()=>{if(!confirm("Confirm that the MT5 account shown is a DEMO account. No real-money account is permitted."))return;try{let x=await api("/api/arm",{confirm_demo:true});showMessage(x.message);refresh()}catch(e){showMessage(e.message)}};
+document.getElementById("saveToken").onclick=async()=>{
+ apiToken=document.getElementById("apiToken").value.trim();
+ if(!apiToken){showMessage("Enter the private API token.");return}
+ try{await refresh();document.getElementById("connectionText").textContent="Private engine connected";}catch(e){document.getElementById("connectionText").textContent=e.message;showMessage(e.message)}
+};
+document.querySelectorAll(".bot").forEach(b=>b.addEventListener("click",async()=>{
+ try{await api("/api/select",{bot:b.dataset.bot});selected=b.dataset.bot;document.querySelectorAll(".bot").forEach(x=>x.classList.toggle("active",x===b));refresh()}catch(e){showMessage(e.message)}
+}));
+document.getElementById("arm").onclick=async()=>{
+ if(!confirm("Confirm that the MT5 account shown is a DEMO account. Real-money trading is blocked."))return;
+ try{let x=await api("/api/arm",{confirm_demo:true});showMessage(x.message);refresh()}catch(e){showMessage(e.message)}
+};
 document.getElementById("start").onclick=async()=>{try{let x=await api("/api/start",{});showMessage(x.message);refresh()}catch(e){showMessage(e.message)}};
 document.getElementById("stop").onclick=async()=>{try{let x=await api("/api/stop",{});showMessage(x.message);refresh()}catch(e){showMessage(e.message)}};
 document.getElementById("disarm").onclick=async()=>{try{let x=await api("/api/disarm",{});showMessage(x.message);refresh()}catch(e){showMessage(e.message)}};
 async function refresh(){
- try{
-  const s=await api("/api/status");
-  const a=s.account;
-  document.getElementById("mt5pill").textContent=s.connected?"MT5 CONNECTED":"MT5 DISCONNECTED";
-  document.getElementById("mt5pill").className="pill "+(s.connected?"good":"bad");
-  document.getElementById("modepill").textContent=a?(a.mode+" ACCOUNT"):"ACCOUNT UNKNOWN";
-  document.getElementById("modepill").className="pill "+(a&&a.mode==="DEMO"?"good":"bad");
-  document.getElementById("balance").textContent=a?fmt(a.balance):"—";
-  document.getElementById("equity").textContent=a?fmt(a.equity):"—";
-  document.getElementById("currency").textContent=a?a.currency:"MT5 account";
-  document.getElementById("server").textContent=a?a.server:"—";
-  document.getElementById("accountMode").textContent=a?a.mode:"—";
-  document.getElementById("permissions").textContent=a?`Account ${a.trade_allowed?"ON":"OFF"} · Expert ${a.expert_allowed?"ON":"OFF"} · Terminal ${a.terminal_trade_allowed?"ON":"OFF"}`:"—";
-  document.getElementById("armedState").textContent=s.armed?"ARMED — DEMO ONLY":"DISARMED";
-  document.getElementById("daily").textContent=`${s.daily_trades} / ${s.max_trades}`;
-  document.getElementById("runState").textContent=s.running?"SCANNER RUNNING":"SCANNER STOPPED";
-  document.getElementById("runDot").className="dot "+(s.running?"on":"");
-  document.getElementById("lastScan").textContent=s.last_scan||"";
-  document.getElementById("signals").innerHTML=(s.signals||[]).map(x=>`<tr><td><b>${x.symbol}</b></td><td class="${x.signal==="BUY"?"buy":x.signal==="SELL"?"sell":"wait"}">${x.signal}</td><td>${x.bid?x.bid.toFixed(x.digits):"—"}</td><td>${x.ask?x.ask.toFixed(x.digits):"—"}</td><td>${x.reason||""}</td></tr>`).join("")||'<tr><td colspan="5" class="muted">Scanner has not produced data yet.</td></tr>';
-  document.getElementById("logs").innerHTML=(s.logs||[]).map(x=>`<div class="log ${x.level}"><time>${x.time}</time>${x.message}</div>`).join("")||'<div class="muted">No events yet.</div>';
-  const p=await api("/api/positions");
-  document.getElementById("positionsCount").textContent=p.positions.length;
-  document.getElementById("positions").innerHTML=p.positions.map(x=>`<tr><td>${x.ticket}</td><td>${x.symbol}</td><td class="${x.side==="BUY"?"buy":"sell"}">${x.side}</td><td>${x.volume}</td><td>${x.price}</td><td>${x.sl}</td><td>${x.tp}</td><td>${fmt(x.profit)}</td></tr>`).join("")||'<tr><td colspan="8" class="muted">No ACID positions.</td></tr>';
- }catch(e){console.error(e)}
+ const s=await api("/api/status");
+ const a=s.account;
+ document.getElementById("mt5pill").textContent=s.connected?"MT5 CONNECTED":"MT5 DISCONNECTED";
+ document.getElementById("mt5pill").className="pill "+(s.connected?"good":"bad");
+ document.getElementById("modepill").textContent=a?(a.mode+" ACCOUNT"):"ACCOUNT UNKNOWN";
+ document.getElementById("modepill").className="pill "+(a&&a.mode==="DEMO"?"good":"bad");
+ document.getElementById("balance").textContent=a?fmt(a.balance):"—";
+ document.getElementById("equity").textContent=a?fmt(a.equity):"—";
+ document.getElementById("currency").textContent=a?a.currency:"MT5 account";
+ document.getElementById("server").textContent=a?a.server:"—";
+ document.getElementById("accountMode").textContent=a?a.mode:"—";
+ document.getElementById("permissions").textContent=a?`Account ${a.trade_allowed?"ON":"OFF"} · Expert ${a.expert_allowed?"ON":"OFF"} · Terminal ${a.terminal_trade_allowed?"ON":"OFF"}`:"—";
+ document.getElementById("armedState").textContent=s.armed?"ARMED — DEMO ONLY":"DISARMED";
+ document.getElementById("daily").textContent=`${s.daily_trades} / ${s.max_trades}`;
+ document.getElementById("runState").textContent=s.running?"SCANNER RUNNING":"SCANNER STOPPED";
+ document.getElementById("runDot").className="dot "+(s.running?"on":"");
+ document.getElementById("lastScan").textContent=s.last_scan||"";
+ document.getElementById("signals").innerHTML=(s.signals||[]).map(x=>`<tr><td><b>${x.symbol}</b></td><td class="${x.signal==="BUY"?"buy":x.signal==="SELL"?"sell":"wait"}">${x.signal}</td><td>${x.bid?x.bid.toFixed(x.digits):"—"}</td><td>${x.ask?x.ask.toFixed(x.digits):"—"}</td><td>${x.reason||""}</td></tr>`).join("")||'<tr><td colspan="5" class="muted">Scanner has not produced data yet.</td></tr>';
+ document.getElementById("logs").innerHTML=(s.logs||[]).map(x=>`<div class="log ${x.level}"><time>${x.time}</time>${x.message}</div>`).join("")||'<div class="muted">No events yet.</div>';
+ const p=await api("/api/positions");
+ document.getElementById("positionsCount").textContent=p.positions.length;
+ document.getElementById("positions").innerHTML=p.positions.map(x=>`<tr><td>${x.ticket}</td><td>${x.symbol}</td><td class="${x.side==="BUY"?"buy":"sell"}">${x.side}</td><td>${x.volume}</td><td>${x.price}</td><td>${x.sl}</td><td>${x.tp}</td><td>${fmt(x.profit)}</td></tr>`).join("")||'<tr><td colspan="8" class="muted">No ACID positions.</td></tr>';
+ document.getElementById("connectionText").textContent="Engine reachable · MT5 "+(s.connected?"connected":"disconnected");
 }
-refresh();setInterval(refresh,2500);
-</script></body></html>
+document.getElementById("apiToken").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("saveToken").click()});
+if(apiToken)setInterval(()=>refresh().catch(console.error),2500);
+</script>
+</body>
+</html>
