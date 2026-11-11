@@ -4,10 +4,14 @@ import MetaTrader5 as mt5
 import threading
 import time
 import math
+import os
+import secrets
+import hmac
+from pathlib import Path
 from datetime import datetime, date
 
 # ============================================================
-# ACID FX PRO — DEMO-ONLY EXECUTION ENGINE
+# ACID FX PRO — PRIVATE DEMO-ONLY EXECUTION ENGINE
 # ============================================================
 
 app = Flask(__name__, static_folder=".", static_url_path="")
@@ -28,12 +32,96 @@ COOLDOWN_SECONDS = 600
 REJECT_RETRY_SECONDS = 60
 DEVIATION = 20
 
-# MT5 execution mode values
 TRADE_EXECUTION_MARKET = 2
-
-# MT5 symbol filling flags
 SYMBOL_FILLING_FOK_FLAG = 1
 SYMBOL_FILLING_IOC_FLAG = 2
+
+# ============================================================
+# PRIVATE API TOKEN
+# Stored outside the GitHub project folder.
+# ============================================================
+
+LOCAL_DATA = Path(
+    os.environ.get("LOCALAPPDATA", str(Path.home()))
+)
+
+TOKEN_DIR = LOCAL_DATA / "ACIDFXPRO"
+TOKEN_FILE = TOKEN_DIR / "api_token.txt"
+
+TOKEN_DIR.mkdir(parents=True, exist_ok=True)
+
+if not TOKEN_FILE.exists():
+    TOKEN_FILE.write_text(
+        secrets.token_urlsafe(48),
+        encoding="utf-8"
+    )
+
+API_TOKEN = TOKEN_FILE.read_text(
+    encoding="utf-8"
+).strip()
+
+if len(API_TOKEN) < 40:
+    raise RuntimeError(
+        "API token file is invalid. "
+        "Delete the local token file and restart."
+    )
+
+ALLOWED_ORIGINS = {
+    "https://acid-fx-pro.vercel.app",
+    "https://acidx.tailf72e0e.ts.net"
+}
+
+# ============================================================
+# AUTHENTICATION AND CORS
+# ============================================================
+
+@app.before_request
+def protect_api():
+
+    if not request.path.startswith("/api/"):
+        return None
+
+    # Browser CORS preflight.
+    if request.method == "OPTIONS":
+        return "", 204
+
+    supplied = request.headers.get(
+        "Authorization", ""
+    )
+
+    expected = "Bearer " + API_TOKEN
+
+    if not hmac.compare_digest(supplied, expected):
+        return jsonify({
+            "ok": False,
+            "message": "Unauthorized. Enter your private API token."
+        }), 401
+
+    return None
+
+
+@app.after_request
+def add_cors_headers(response):
+
+    origin = request.headers.get("Origin", "")
+
+    if origin in ALLOWED_ORIGINS:
+
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Headers"] = (
+            "Content-Type, Authorization"
+        )
+        response.headers["Access-Control-Allow-Methods"] = (
+            "GET, POST, OPTIONS"
+        )
+        response.headers["Vary"] = "Origin"
+
+    return response
+
+
+# ============================================================
+# STRATEGIES
+# ============================================================
 
 BOTS = {
     "SCALPER": {
@@ -84,6 +172,7 @@ state = {
 # ============================================================
 
 def log(message, level="INFO"):
+
     stamp = datetime.now().strftime("%H:%M:%S")
 
     with lock:
@@ -490,7 +579,6 @@ def supported_filling_mode(info):
     execution = int(info.trade_exemode)
     flags = int(info.filling_mode)
 
-    # Market execution cannot use RETURN.
     if execution == TRADE_EXECUTION_MARKET:
 
         if flags & SYMBOL_FILLING_FOK_FLAG:
@@ -504,7 +592,6 @@ def supported_filling_mode(info):
             f"Filling flags: {flags}"
         )
 
-    # Request, Instant and Exchange execution.
     return mt5.ORDER_FILLING_RETURN, "RETURN"
 
 
@@ -624,7 +711,6 @@ def execute_demo_order(signal):
 
         return False
 
-    # Select a broker-supported filling policy.
     filling, filling_name = supported_filling_mode(info)
 
     if filling is None:
@@ -677,7 +763,6 @@ def execute_demo_order(signal):
 
         return False
 
-    # Final DEMO and arm verification.
     ok, message = demo_gate()
 
     if not ok or not state["armed"]:
@@ -1002,9 +1087,11 @@ def api_positions():
 def api_health():
 
     return jsonify({
+        "ok": True,
         "service": "ACID FX PRO",
         "execution": "DEMO_ONLY",
-        "magic": MAGIC
+        "magic": MAGIC,
+        "authenticated": True
     })
 
 
@@ -1014,9 +1101,19 @@ def api_health():
 
 if __name__ == "__main__":
 
-    print("ACID FX PRO — DEMO EXECUTION ENGINE")
+    print("=" * 55)
+    print("ACID FX PRO — PRIVATE DEMO EXECUTION ENGINE")
+    print("=" * 55)
     print("Real accounts are blocked.")
     print("Execution starts DISARMED.")
+    print("API authentication is ENABLED.")
+    print()
+    print("PRIVATE API TOKEN — enter this in your dashboard:")
+    print(API_TOKEN)
+    print()
+    print("Token file:", TOKEN_FILE)
+    print("Local server:", f"http://{HOST}:{PORT}")
+    print("=" * 55)
 
     app.run(
         host=HOST,
