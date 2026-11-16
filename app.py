@@ -27,7 +27,7 @@ COMMENT_PREFIX = "ACIDFXPRO"
 
 RISK_PERCENT = 0.5
 MAX_TRADES_PER_DAY = 10
-MAX_OPEN_POSITIONS = 3
+MAX_OPEN_POSITIONS = 2
 COOLDOWN_SECONDS = 600
 REJECT_RETRY_SECONDS = 60
 DEVIATION = 20
@@ -539,73 +539,66 @@ def calc_volume(
     stop_price,
     balance
 ):
-    def calc_volume(
-            symbol,
-            order_type,
-            entry_price,
-            stop_price,
-            balance
-    ):
-        info = mt5.symbol_info(symbol)
 
-        if info is None:
-            return 0.0, "Symbol information unavailable"
+    info = mt5.symbol_info(symbol)
 
-        account = mt5.account_info()
-        currency = account.currency if account else "UNKNOWN"
+    if info is None:
+        return 0.0, "Symbol information unavailable"
 
-        risk_cash = balance * (RISK_PERCENT / 100.0)
+    risk_cash = balance * (
+        RISK_PERCENT / 100.0
+    )
 
-        loss = mt5.order_calc_profit(
-            order_type,
-            symbol,
-            1.0,
-            entry_price,
-            stop_price
+    loss = mt5.order_calc_profit(
+        order_type,
+        symbol,
+        1.0,
+        entry_price,
+        stop_price
+    )
+
+    if loss is None or abs(float(loss)) <= 0:
+        return 0.0, "Could not calculate stop-loss risk"
+
+    raw = risk_cash / abs(float(loss))
+
+    step = float(info.volume_step or 0.01)
+    minimum = float(info.volume_min or 0.01)
+    maximum = float(info.volume_max or 100.0)
+
+    if step <= 0 or minimum <= 0 or maximum < minimum:
+        return 0.0, "Invalid broker volume specifications"
+
+    # Always round DOWN to the broker's volume step. Never round risk up.
+    volume = math.floor(raw / step) * step
+    volume = min(volume, maximum)
+    volume = round(volume, 8)
+
+    if volume < minimum:
+        min_loss = mt5.order_calc_profit(
+            order_type, symbol, minimum, entry_price, stop_price
+        )
+        if min_loss is None:
+            return 0.0, "Could not verify minimum-lot stop-loss risk"
+        return 0.0, (
+            "Skipped: broker minimum lot would exceed the configured "
+            f"risk budget. Estimated minimum-lot loss: {abs(float(min_loss)):.2f}; "
+            f"risk allowance: {risk_cash:.2f}."
         )
 
-        if loss is None or abs(float(loss)) <= 0:
-            return 0.0, "Could not calculate stop-loss risk"
-
-        loss_per_lot = abs(float(loss))
-        raw = risk_cash / loss_per_lot
-
-        step = float(info.volume_step or 0.01)
-        minimum = float(info.volume_min or 0.01)
-        maximum = float(info.volume_max or 100.0)
-
-        volume = math.floor(raw / step) * step
-        volume = min(volume, maximum)
-        volume = round(volume, 8)
-
-        minimum_loss = mt5.order_calc_profit(
-            order_type,
-            symbol,
-            minimum,
-            entry_price,
-            stop_price
+    # Independent final check against the exact volume being requested.
+    estimated_loss = mt5.order_calc_profit(
+        order_type, symbol, volume, entry_price, stop_price
+    )
+    if estimated_loss is None:
+        return 0.0, "Could not verify requested-volume stop-loss risk"
+    if abs(float(estimated_loss)) > risk_cash + 1e-8:
+        return 0.0, (
+            f"Skipped: estimated stop-loss {abs(float(estimated_loss)):.2f} "
+            f"exceeds risk allowance {risk_cash:.2f}."
         )
 
-        if minimum_loss is None:
-            return 0.0, "Could not calculate minimum-lot risk"
-
-        minimum_loss = abs(float(minimum_loss))
-
-        if volume < minimum:
-            return 0.0, (
-                f"Risk check rejected {symbol}: "
-                f"Account currency={currency}; "
-                f"Balance={balance:.2f}; "
-                f"Risk allowance={risk_cash:.2f} {currency}; "
-                f"Minimum lot={minimum}; "
-                f"Minimum-lot estimated loss="
-                f"{minimum_loss:.2f} {currency}; "
-                f"Calculated volume={raw:.6f}; "
-                f"Volume step={step}; "
-                f"Stop distance={abs(entry_price - stop_price):.6f}"
-            )
-
-        return volume, ""
+    return volume, ""
 
 
 # ============================================================
