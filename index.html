@@ -42,22 +42,25 @@ main{max-width:1500px;margin:auto;padding:22px}.grid{display:grid;grid-template-
 <button class="bot" data-bot="FAST"><b>ACID FAST EXECUTION</b><small>M1 momentum · rapid scanning</small></button>
 </div>
 <div class="controls">
+<button class="btn secondary" id="demoMode">DEMO MODE</button>
+<button class="btn secondary" id="liveMode">LIVE MODE</button>
 <button class="btn" id="arm">ARM DEMO EXECUTION</button>
 <button class="btn" id="start">START BOT</button>
 <button class="btn danger" id="stop">EMERGENCY STOP</button>
 <button class="btn secondary" id="disarm">DISARM</button>
 </div>
-<div class="notice"><b>DEMO-ONLY SAFETY:</b> The engine must verify a DEMO account before sending any order. Execution starts disarmed after restart. Emergency Stop prevents new entries; it does not close existing positions.</div>
+<div class="notice" id="modeNotice"><b>DEMO MODE SELECTED:</b> The engine verifies that the connected MT5 account is DEMO before sending orders. LIVE mode requires a REAL account and a separate confirmation. Execution starts disarmed after every restart. Emergency Stop prevents new entries; it does not close existing positions.</div>
 <div style="margin-top:16px" class="statusline"><span class="dot" id="runDot"></span><b id="runState">SCANNER STOPPED</b><span class="muted" id="lastScan"></span></div>
 <h3 class="section-title" style="margin-top:22px">02 / MARKET INTELLIGENCE</h3>
 <div style="overflow:auto"><table class="table"><thead><tr><th>SYMBOL</th><th>SIGNAL</th><th>BID</th><th>ASK</th><th>REASON</th></tr></thead><tbody id="signals"><tr><td colspan="5" class="muted">Waiting for engine connection…</td></tr></tbody></table></div>
 </section>
 <section class="panel">
-<h3 class="section-title">03 / MT5 ACCOUNT GATE</h3>
+<h3 class="section-title">03 / MT5 ACCOUNT & EXECUTION MODE</h3>
 <div class="muted">Account server</div><b id="server">—</b>
 <div class="muted" style="margin-top:12px">Account mode</div><b id="accountMode">—</b>
 <div class="muted" style="margin-top:12px">Trading permissions</div><b id="permissions">—</b>
 <div class="muted" style="margin-top:12px">Execution state</div><b id="armedState">DISARMED</b>
+<div class="muted" style="margin-top:12px">Selected execution mode</div><b id="executionMode">DEMO</b>
 <div class="muted" style="margin-top:18px">Risk model</div><b>0.5% calculated risk per trade</b>
 <div class="muted" style="margin-top:7px">Max 2 open positions · max 3 entries/day · 10-minute symbol cooldown · ATR stop/target</div>
 <h3 class="section-title" style="margin-top:25px">04 / ENGINE LOG</h3><div id="logs"><div class="muted">No events yet.</div></div>
@@ -67,12 +70,14 @@ main{max-width:1500px;margin:auto;padding:22px}.grid{display:grid;grid-template-
 <section class="panel"><h3 class="section-title">05 / OPEN ACID POSITIONS</h3><div style="overflow:auto"><table class="table"><thead><tr><th>TICKET</th><th>SYMBOL</th><th>SIDE</th><th>VOLUME</th><th>ENTRY</th><th>SL</th><th>TP</th><th>P/L</th></tr></thead><tbody id="positions"><tr><td colspan="8" class="muted">No positions.</td></tr></tbody></table></div></section>
 <section class="panel"><h3 class="section-title">06 / WATCHLIST</h3><div class="statusline"><span class="pill">XAUUSD</span><span class="pill">EURUSD</span><span class="pill">GBPUSD</span><span class="pill">USDJPY</span></div><p class="muted">The engine checks exact symbol names only. Broker suffixes are not automatically substituted.</p></section>
 </div>
-<div class="foot">ACID FX PRO · Private Tailscale engine · Demo account only. Automated trading can lose money; use demo funds only.</div>
+<div class="foot">ACID FX PRO · Private Tailscale engine · LIVE mode can lose real money. Verify account, symbol, lot size and stop-loss before arming. No strategy guarantees profit.</div>
 </main>
 <script>
 const API_BASE="https://acidx.tailf72e0e.ts.net";
 let apiToken="";
 let selected="SCALPER";
+let executionMode="DEMO";
+let pollHandle=null;
 function getToken(){return apiToken}
 async function api(url,body){
  const token=getToken();
@@ -92,14 +97,39 @@ function showMessage(m){alert(m)}
 document.getElementById("saveToken").onclick=async()=>{
  apiToken=document.getElementById("apiToken").value.trim();
  if(!apiToken){showMessage("Enter the private API token.");return}
- try{await refresh();document.getElementById("connectionText").textContent="Private engine connected";}catch(e){document.getElementById("connectionText").textContent=e.message;showMessage(e.message)}
+ try{
+  await refresh();
+  document.getElementById("connectionText").textContent="Private engine connected";
+  if(pollHandle===null)pollHandle=setInterval(()=>refresh().catch(e=>document.getElementById("connectionText").textContent=e.message),2500);
+ }catch(e){document.getElementById("connectionText").textContent=e.message;showMessage(e.message)}
 };
 document.querySelectorAll(".bot").forEach(b=>b.addEventListener("click",async()=>{
  try{await api("/api/select",{bot:b.dataset.bot});selected=b.dataset.bot;document.querySelectorAll(".bot").forEach(x=>x.classList.toggle("active",x===b));refresh()}catch(e){showMessage(e.message)}
 }));
+async function chooseMode(mode){
+ if(mode==="LIVE"&&!confirm("Select LIVE mode? This only selects the mode; it does not start trading. Orders can risk real money."))return;
+ try{
+  const x=await api("/api/mode",{mode});
+  executionMode=mode;
+  updateModeControls();
+  showMessage(x.message);
+  await refresh();
+ }catch(e){showMessage(e.message)}
+}
+function updateModeControls(){
+ document.getElementById("demoMode").className="btn "+(executionMode==="DEMO"?"":"secondary");
+ document.getElementById("liveMode").className="btn "+(executionMode==="LIVE"?"danger":"secondary");
+ document.getElementById("arm").textContent="ARM "+executionMode+" EXECUTION";
+ document.getElementById("executionMode").textContent=executionMode;
+ document.getElementById("modeNotice").innerHTML=executionMode==="LIVE"?"<b>LIVE MODE SELECTED:</b> Only a verified REAL MT5 account can pass the execution gate. Arming requires a second explicit confirmation. Orders can lose real money. Execution starts disarmed after every restart.":"<b>DEMO MODE SELECTED:</b> Only a verified DEMO MT5 account can pass the execution gate. Execution starts disarmed after every restart.";
+}
+document.getElementById("demoMode").onclick=()=>chooseMode("DEMO");
+document.getElementById("liveMode").onclick=()=>chooseMode("LIVE");
 document.getElementById("arm").onclick=async()=>{
- if(!confirm("Confirm that the MT5 account shown is a DEMO account. Real-money trading is blocked."))return;
- try{let x=await api("/api/arm",{confirm_demo:true});showMessage(x.message);refresh()}catch(e){showMessage(e.message)}
+ const live=executionMode==="LIVE";
+ const promptText=live?"FINAL CONFIRMATION: Arm automated LIVE trading on the connected REAL MT5 account? Real money can be lost. Check the account, symbol permissions, lot size and stop-loss first.":"Confirm that the connected MT5 account shown is a DEMO account and arm demo execution.";
+ if(!confirm(promptText))return;
+ try{let payload=live?{confirm_live:true}:{confirm_demo:true};let x=await api("/api/arm",payload);showMessage(x.message);refresh()}catch(e){showMessage(e.message)}
 };
 document.getElementById("start").onclick=async()=>{try{let x=await api("/api/start",{});showMessage(x.message);refresh()}catch(e){showMessage(e.message)}};
 document.getElementById("stop").onclick=async()=>{try{let x=await api("/api/stop",{});showMessage(x.message);refresh()}catch(e){showMessage(e.message)}};
@@ -117,7 +147,9 @@ async function refresh(){
  document.getElementById("server").textContent=a?a.server:"—";
  document.getElementById("accountMode").textContent=a?a.mode:"—";
  document.getElementById("permissions").textContent=a?`Account ${a.trade_allowed?"ON":"OFF"} · Expert ${a.expert_allowed?"ON":"OFF"} · Terminal ${a.terminal_trade_allowed?"ON":"OFF"}`:"—";
- document.getElementById("armedState").textContent=s.armed?"ARMED — DEMO ONLY":"DISARMED";
+ executionMode=s.execution_mode||"DEMO";
+ updateModeControls();
+ document.getElementById("armedState").textContent=s.armed?("ARMED — "+executionMode):"DISARMED";
  document.getElementById("daily").textContent=`${s.daily_trades} / ${s.max_trades}`;
  document.getElementById("runState").textContent=s.running?"SCANNER RUNNING":"SCANNER STOPPED";
  document.getElementById("runDot").className="dot "+(s.running?"on":"");
@@ -130,7 +162,7 @@ async function refresh(){
  document.getElementById("connectionText").textContent="Engine reachable · MT5 "+(s.connected?"connected":"disconnected");
 }
 document.getElementById("apiToken").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("saveToken").click()});
-if(apiToken)setInterval(()=>refresh().catch(console.error),2500);
+// Polling starts after the user connects a valid API token.
 </script>
 </body>
 </html>
