@@ -465,7 +465,11 @@ main { max-width:1500px;margin:auto;padding:22px; }
   that served this dashboard.
   Do not replace this with the remote Tailscale address.
 */
-const API_BASE = "";
+const API_BASE =
+  (location.hostname === "127.0.0.1" ||
+   location.hostname === "localhost")
+    ? ""
+    : "https://acidx.tailf72e0e.ts.net";
 
 let apiToken = "";
 let selected = "SCALPER";
